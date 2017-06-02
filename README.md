@@ -2,7 +2,7 @@
 
 Python module for running functions and tasks async, to improve latency.
 
-Designed for minimum effort for the end-user.
+Designed for the end-user.
 
 ``` python
 import asyncd

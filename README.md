@@ -6,8 +6,10 @@ Designed for minimum effort for the end-user.
 
 ``` python
 import asyncd
-def function_to_run("input"):
+
+def function_to_run(input):
     print(input)
+    
 a = asyncd.async(function_to_run)
 
 a("Ran on separate thread")

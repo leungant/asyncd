@@ -1,0 +1,1 @@
+from asyncd import async

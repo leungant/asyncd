@@ -1,18 +1,19 @@
 # Asyncd
 
-Python module for running functions and tasks async, to improve latency.
+Python module for speeding up application responsiveness by asynchronously running functions.
+
 
 Designed for the end-user.
 
 ``` python
-import asyncd
+import asyncd, time
 
-def function_to_run(inputs):
-    for this_input in inputs:
-        expensive_function_to_run(this_input)
+def expensive_function_to_run(input):
+    time.sleep(0.02)
+    print(input)
 
 # Get an async version of your function
-a = asyncd.async(function_to_run)
+a = asyncd.async(expensive_function_to_run)
 
 for i in range(1000):
     a("Ran on separate thread %s" % i)

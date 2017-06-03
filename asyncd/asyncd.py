@@ -37,7 +37,7 @@ After timeout (1 sec default) if there are no new operations requested, the thre
 
 Roadmap:
 
-This version (1) improves latency.
+This version (1) improves latency. TODO add decorator.
 
 Version 2: improve bandwidth with a threadpool, maybe processpool option
 

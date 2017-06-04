@@ -1,5 +1,10 @@
 #!/usr/bin/env python
+'''
+implement decorator with args: https://blogs.it.ox.ac.uk/inapickle/2012/01/05/python-decorators-with-optional-arguments/
+'''
+
 ''' Async. 
+
 Run logging/any function on a separate thread/process so your main program can continue to run. Achieve with simple syntax:
 
 ai = asyncd.async(fn)

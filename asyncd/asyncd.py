@@ -115,7 +115,7 @@ import pylru
 def asyncd(method, queue_timeout=0.1, num_threads=1):
     a = async(method, queue_timeout=queue_timeout, num_threads=num_threads) 
     return a
-cached_asyncifys = pylru.FunctionCacheManager(asyncify, size=10000)
+cached_asyncd = pylru.FunctionCacheManager(asyncd, size=10000)
 
 
 

@@ -33,7 +33,7 @@ The print statement will print immediately, ai_log will print with a delay. The 
 
 Suitable for e.g. C100 or other IO constrained problems which cause unnecessary server response delays due to blocks on expensive operations. For operations not requiring confirmation the main thread can continue to process requests while the task waits for the expensive process to complete in the background. 
 
-After timeout (1 sec default) if there are no new operations requested, the thread is stopped, and another is recreated when next needed. The overhead to thread creation is usually several orders of magnitude less than most io operations so as to be minimal. 
+After queue_max_wait_time (1 sec default) if there are no new operations requested, the thread is stopped, and another is recreated when next needed. The overhead to thread creation is usually several orders of magnitude less than most io operations so as to be minimal. 
 
 
 Roadmap:
@@ -63,43 +63,46 @@ else:
 
 import copy
 
-def worker(q, fn, timeout):
+def worker(q, fn, queue_max_wait_time):
     while True:
         try:
             #item = q.get(timeout=timeout)
             #fn(item)
-            args, kwargs = q.get(timeout=timeout)
+            args, kwargs = q.get(timeout=queue_max_wait_time)
             fn(*args, **kwargs)
             q.task_done()
-        except QUEUE_EMPTY as e: # catches timeout
+        except QUEUE_EMPTY as e: # catches timeout for queue.get
             return
 
 
+import atexit
 class async():
-    def __init__(self, fn=print, queue_timeout=2, num_threads=1):
+    def __init__(self, fn=print, queue_max_wait_time=2, num_threads=1):
         self.q = Queue(maxsize=-1)
         self.fn = fn
-        self.timeout = timeout
+        self.queue_max_wait_time = queue_max_wait_time
         self.num_threads = num_threads
         self._revive_thread()
+        atexit.register(self.__del__, ) # Python 3 wasn't waiting at exit. so try this, should be good for both. Python 3 seems to have an awkward __del__ NoneType not callable error but all seems to run
 
     def _revive_thread(self):
-        self.t = threading.Thread(target=worker, args=(self.q, self.fn, self.timeout))
+        self.t = threading.Thread(target=worker, args=(self.q, self.fn, self.queue_max_wait_time))
         self.t.setDaemon(True)
         self.t.start()
-        # print('\n\n\n %s \n\n' % fn.__name__)
 
 
     def __del__(self):
         # Waits for queue, thread to finish
         # print('in cleanup finalisation del')
-        self.q.join()
+        # Wait thread to finish first for processing, as q can overtake (needs confirmation) 
         self.t.join()
+        self.q.join()
+    wait = __del__
 
     def call(self, *args, **kwargs):
         #print('in log %s %s' % (args, kwargs))
         if not self.t.isAlive():
-            # print("Restarting thread and queue after timeout")
+            # print("Restarting thread and queue after queue max wait time")
             self._revive_thread()
         #this_args, this_kwargs = copy.deepcopy(args), copy.deepcopy(kwargs) # paranoia induced by class and ref counting approach
         #self.q.put((this_args, this_kwargs))
@@ -111,11 +114,11 @@ class async():
 # @lrudecorator(10000) cant use decorator because attached goes out of scope! Ask Python maintainers for expected functionality.. seems inconsistent with function as a fc citizen.
 # Does stay in scope if we use the FunctionCacheManager
 # Tried functools approach but didn't seem the right choice in this scenario
-import pylru
-def asyncd(method, queue_timeout=0.1, num_threads=1):
-    a = async(method, queue_timeout=queue_timeout, num_threads=num_threads) 
-    return a
-cached_asyncd = pylru.FunctionCacheManager(asyncd, size=10000)
+#import pylru
+#def asyncd(method, queue_max_wait_time=1, num_threads=1):
+#    a = async(method, queue_max_wait_time=queue_max_wait_time, num_threads=num_threads) 
+#    return a
+#cached_asyncd = pylru.FunctionCacheManager(asyncd, size=10000)
 
 
 
@@ -146,7 +149,7 @@ if __name__ == '__main__':
     time.sleep(5)
 
     print('\n\n\nALog\n\n\n')
-    al = async(slow_log, timeout=1)
+    al = async(slow_log, queue_max_wait_time=1)
     al('hello',3)
     time.sleep(2)
 
@@ -155,8 +158,10 @@ if __name__ == '__main__':
         al('%s asdf' % i, 0.02)
 
     time.sleep(2)
+    #al.wait()
+
     # Test variable arguments
-    al_def = async(slow_log_default, timeout=1)
+    al_def = async(slow_log_default, queue_max_wait_time=1)
     for i in range(100):
         print('%s print' % i)
         al_def('%s asdf' % i)

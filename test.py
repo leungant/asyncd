@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 import asyncd
+from asyncd import async
 
 import time
 def slow_log(msg):
     time.sleep(0.1)
     print(msg)
 
-@asyncd.async
+@async
 def slow_log_a(msg):
     time.sleep(0.1)
     print(msg)

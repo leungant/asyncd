@@ -109,16 +109,6 @@ class async():
         self.q.put((args, kwargs))
     __call__ = call
 
-# Implement as decorator
-# from pylru import lrudecorator
-# @lrudecorator(10000) cant use decorator because attached goes out of scope! Ask Python maintainers for expected functionality.. seems inconsistent with function as a fc citizen.
-# Does stay in scope if we use the FunctionCacheManager
-# Tried functools approach but didn't seem the right choice in this scenario
-#import pylru
-#def asyncd(method, queue_max_wait_time=1, num_threads=1):
-#    a = async(method, queue_max_wait_time=queue_max_wait_time, num_threads=num_threads) 
-#    return a
-#cached_asyncd = pylru.FunctionCacheManager(asyncd, size=10000)
 
 
 

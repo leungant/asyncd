@@ -1,8 +1,4 @@
 #!/usr/bin/env python
-'''
-implement decorator with args: https://blogs.it.ox.ac.uk/inapickle/2012/01/05/python-decorators-with-optional-arguments/
-'''
-
 ''' Async. 
 
 Run logging/any function on a separate thread/process so your main program can continue to run. Achieve with simple syntax:
@@ -50,14 +46,13 @@ Version 3: await-able tasks (for operations that needed confirmation, but which 
 
 If you like the approach, feel free to work on the project!  '''
 
-
-
 from __future__ import print_function
 
 import time
 import threading
 from threading import Thread
 import sys
+
 if sys.version_info[0] < 3:
     from Queue import Queue
     from Queue import Empty as QUEUE_EMPTY
@@ -81,10 +76,11 @@ def worker(q, fn, timeout):
 
 
 class async():
-    def __init__(self, fn=print, timeout=2):
+    def __init__(self, fn=print, queue_timeout=2, num_threads=1):
         self.q = Queue(maxsize=-1)
         self.fn = fn
         self.timeout = timeout
+        self.num_threads = num_threads
         self._revive_thread()
 
     def _revive_thread(self):
@@ -100,7 +96,7 @@ class async():
         self.q.join()
         self.t.join()
 
-    def log(self, *args, **kwargs):
+    def call(self, *args, **kwargs):
         #print('in log %s %s' % (args, kwargs))
         if not self.t.isAlive():
             # print("Restarting thread and queue after timeout")
@@ -108,9 +104,22 @@ class async():
         #this_args, this_kwargs = copy.deepcopy(args), copy.deepcopy(kwargs) # paranoia induced by class and ref counting approach
         #self.q.put((this_args, this_kwargs))
         self.q.put((args, kwargs))
-    __call__ = log
+    __call__ = call
+
+# Implement as decorator
+# from pylru import lrudecorator
+# @lrudecorator(10000) cant use decorator because attached goes out of scope! Ask Python maintainers for expected functionality.. seems inconsistent with function as a fc citizen.
+# Does stay in scope if we use the FunctionCacheManager
+# Tried functools approach but didn't seem the right choice in this scenario
+import pylru
+def asyncd(method, queue_timeout=0.1, num_threads=1):
+    a = async(method, queue_timeout=queue_timeout, num_threads=num_threads) 
+    return a
+cached_asyncifys = pylru.FunctionCacheManager(asyncify, size=10000)
 
 
+
+# TESTING. (for Auto: could write to files, compare file contents, file times)
 def slow_log(input, wait):# , wait=0.001):
     time.sleep(wait) # 0.001)
     print("slow log %s %s" % (wait,input))
@@ -121,6 +130,21 @@ def slow_log_default(input, wait=0.01):# , wait=0.001):
 
 
 if __name__ == '__main__':
+    print('Testing decorator functionality')
+    @asyncd
+    def slow_log_dec(msg, wait=0.04):
+        print('called with wait %s' % wait)
+        time.sleep(wait)
+        print("slow_log_dec %s %s" % (wait, msg))
+    slow_log_dec('hello from slow_log_dec')
+
+    for i in range(100):
+        print('triggered slow_log_dec %s' % i)
+        slow_log_dec('hello from slow_log_dec %s' % i)
+        slow_log_dec('hello from slow_log_dec %s' % i, 0.12)
+    
+    time.sleep(5)
+
     print('\n\n\nALog\n\n\n')
     al = async(slow_log, timeout=1)
     al('hello',3)
@@ -139,23 +163,27 @@ if __name__ == '__main__':
         al_def('%s asdf' % i, 0.03)
 
     for j in range(10):
-        al.log('%s some bonus material' % j)
+        al('%s some bonus material' % j, wait=0.02)
 
     for i in range(100):
         print("printing %s as processing" % i)
-        al.log(i)
+        al_def(i)
 
     for j in range(100):
         print("printing j %s as processing" % j)
-        al.log("j %s" % j)
+        al_def("j %s" % j)
 
     time.sleep(4)
     for k in range(100):
         print("printing k %s as processing" % k)
-        al.log("k %s" % k)
+        al_def("k %s" % k)
 
     time.sleep(7)
     for l in range(100):
         print("printing l %s as processing" % l)
-        al.log("l %s" % l)
+        al_def("l %s" % l)
 
+    for i in range(100):
+        print('triggered slow_log_dec %s' % i)
+        slow_log_dec('hello from slow_log_dec %s' % i)
+        slow_log_dec('hello from slow_log_dec %s' % i, 0.12)

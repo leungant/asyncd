@@ -1,4 +1,4 @@
 try:
     from asyncd import async
 except:
-    from . import async
+    from .asyncd import async
